@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cubo 3D - 27 Cubos com Arestas Cinza</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 15px;
+            border-radius: 8px;
+            z-index: 10;
+            font-size: 14px;
+            pointer-events: none;
+        }
+        button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            z-index: 10;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #ff3366;
+            transform: scale(1.05);
+        }
+        #status {
+            position: absolute;
+            bottom: 20px;
+            right: 180px;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #ff6699;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">✨ CUBO 3D | 27 cubos | Arestas cinza escuro ✨</div>
+    <div id="status">💎 MODO RESILIENTE</div>
+    <button id="toggleBtn">✨ ALTERNAR RESILIÊNCIA ✨</button>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Cena
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        // Câmera
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(6, 5, 8);
+        camera.lookAt(0, 0, 0);
+
+        // Renderizador
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Controles
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = true;
+        controls.enablePan = true;
+
+        // Configuração dos cubos
+        const cubeSize = 1.0;
+        const spacing = 0.08;
+        const step = cubeSize + spacing;
+        const offsets = [-1, 0, 1];
+
+        // Materiais para o corpo do cubo
+        const resilientMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.2,
+            metalness: 0.9,
+            emissive: 0x442266,
+            emissiveIntensity: 0.4
+        });
+
+        const flatMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff
+        });
+
+        // Material das arestas (cinza escuro)
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x333333 });
+
+        // Criar os 27 cubos com arestas
+        const cubes = [];
+        
+        offsets.forEach(i => {
+            offsets.forEach(j => {
+                offsets.forEach(k => {
+                    // Geometria do cubo
+                    const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+                    const cube = new THREE.Mesh(geometry, resilientMaterial);
+                    cube.position.set(i * step, j * step, k * step);
+                    scene.add(cube);
+                    cubes.push(cube);
+                    
+                    // Adicionar arestas (bordas) em cinza escuro
+                    const edges = new THREE.EdgesGeometry(geometry);
+                    const wireframe = new THREE.LineSegments(edges, edgeMaterial);
+                    wireframe.position.copy(cube.position);
+                    scene.add(wireframe);
+                    // Guardar referência para alternar também as arestas se necessário
+                    cube.userData.wireframe = wireframe;
+                });
+            });
+        });
+
+        // Iluminação (apenas para o modo resiliente)
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.7);
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        mainLight.position.set(3, 5, 2);
+        const fillLight = new THREE.DirectionalLight(0xccaa88, 0.5);
+        fillLight.position.set(-2, 1, 3);
+        const backLight = new THREE.PointLight(0x4466cc, 0.4);
+        backLight.position.set(0, 1, -4);
+        
+        scene.add(ambientLight);
+        scene.add(mainLight);
+        scene.add(fillLight);
+        scene.add(backLight);
+
+        let resilienceEnabled = true;
+        const statusDiv = document.getElementById('status');
+        const toggleBtn = document.getElementById('toggleBtn');
+
+        function toggleResilience() {
+            resilienceEnabled = !resilienceEnabled;
+            
+            cubes.forEach(cube => {
+                cube.material = resilienceEnabled ? resilientMaterial : flatMaterial;
+                // As arestas permanecem visíveis em ambos os modos
+            });
+            
+            // Controlar luzes
+            ambientLight.visible = resilienceEnabled;
+            mainLight.visible = resilienceEnabled;
+            fillLight.visible = resilienceEnabled;
+            backLight.visible = resilienceEnabled;
+            
+            if (resilienceEnabled) {
+                statusDiv.innerHTML = '💎 MODO RESILIENTE';
+                statusDiv.style.color = '#ff6699';
+                toggleBtn.style.background = 'rgba(255,51,102,0.8)';
+            } else {
+                statusDiv.innerHTML = '⬜ BRANCO LISO';
+                statusDiv.style.color = '#cccccc';
+                toggleBtn.style.background = 'rgba(0,0,0,0.7)';
+            }
+        }
+        
+        toggleBtn.addEventListener('click', toggleResilience);
+
+        // Animação
+        function animate() {
+            controls.update();
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+
+        // Ajustar janela
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        console.log('✅ 27 cubos criados | Espaçamento de 0.08 | Arestas cinza escuro | Clique no botão para alternar');
+    </script>
+</body>
+</html>
